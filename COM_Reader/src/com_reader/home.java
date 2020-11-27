@@ -5,14 +5,18 @@
  */
 package com_reader;
 
+import java.io.IOException;
 import java.io.InputStream;
-import java.text.NumberFormat;
 import java.util.Enumeration;
+import java.util.TooManyListenersException;
 import javax.comm.CommPortIdentifier;
+import javax.comm.PortInUseException;
 import javax.comm.SerialPort;
 import javax.comm.SerialPortEvent;
 import javax.comm.SerialPortEventListener;
+import javax.comm.UnsupportedCommOperationException;
 import javax.swing.JOptionPane;
+import javax.swing.text.DefaultCaret;
 
 /**
  *
@@ -26,23 +30,26 @@ public class home extends javax.swing.JFrame implements SerialPortEventListener 
     private CommPortIdentifier portId;
     private Enumeration portList;
     private InputStream inputStream;
-    private SerialPort serialPort;
+    private SerialPort serialPort = null;
 
     public home() {
         initComponents();
         getAllComPorts();
+        DefaultCaret caret = (DefaultCaret) jTextArea2.getCaret();
+        caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+        setLocationRelativeTo(null);
     }
 
     private void getAllComPorts() {
         try {
-            jComboBox1.removeAllItems();
-            jComboBox1.addItem("Select");
-            portList=CommPortIdentifier.getPortIdentifiers();
-            while(portList.hasMoreElements()){
-                portId=(CommPortIdentifier) portList.nextElement();
-                if(portId.getPortType()==CommPortIdentifier.PORT_SERIAL){
-                    jComboBox1.addItem(portId.getName());
-                }                
+            ports.removeAllItems();
+            ports.addItem("Select");
+            portList = CommPortIdentifier.getPortIdentifiers();
+            while (portList.hasMoreElements()) {
+                portId = (CommPortIdentifier) portList.nextElement();
+                if (portId.getPortType() == CommPortIdentifier.PORT_SERIAL) {
+                    ports.addItem(portId.getName());
+                }
             }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(rootPane, e.getMessage());
@@ -60,12 +67,12 @@ public class home extends javax.swing.JFrame implements SerialPortEventListener 
 
         jPanel1 = new javax.swing.JPanel();
         jLabel1 = new javax.swing.JLabel();
-        jComboBox1 = new javax.swing.JComboBox<>();
-        jButton1 = new javax.swing.JButton();
+        ports = new javax.swing.JComboBox<>();
+        refresh = new javax.swing.JButton();
         jLabel2 = new javax.swing.JLabel();
-        jFormattedTextField1 = new javax.swing.JFormattedTextField(NumberFormat.getIntegerInstance());
-        jButton2 = new javax.swing.JButton();
+        openPort = new javax.swing.JButton();
         jButton3 = new javax.swing.JButton();
+        baudRate = new javax.swing.JComboBox<>();
         jScrollPane2 = new javax.swing.JScrollPane();
         jTextArea2 = new javax.swing.JTextArea();
 
@@ -77,23 +84,33 @@ public class home extends javax.swing.JFrame implements SerialPortEventListener 
 
         jLabel1.setText("Serial COM Port");
 
-        jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Select" }));
+        ports.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Select" }));
 
-        jButton1.setText("Refresh");
-        jButton1.addActionListener(new java.awt.event.ActionListener() {
+        refresh.setText("Refresh");
+        refresh.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton1ActionPerformed(evt);
+                refreshActionPerformed(evt);
             }
         });
 
         jLabel2.setText("Baud Rate");
 
-        jFormattedTextField1.setHorizontalAlignment(javax.swing.JTextField.CENTER);
-        jFormattedTextField1.setPreferredSize(new java.awt.Dimension(70, 22));
-
-        jButton2.setText("Open");
+        openPort.setText("Open");
+        openPort.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                openPortActionPerformed(evt);
+            }
+        });
 
         jButton3.setText("Close");
+        jButton3.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton3ActionPerformed(evt);
+            }
+        });
+
+        baudRate.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Select", "300", "600", "1200", "2400", "4800", "9600", "14400", "19200", "38400", "57600", "115200", "230400", "460800", " " }));
+        baudRate.setSelectedIndex(6);
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
@@ -103,15 +120,15 @@ public class home extends javax.swing.JFrame implements SerialPortEventListener 
                 .addContainerGap()
                 .addComponent(jLabel1)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(ports, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jButton1)
+                .addComponent(refresh)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jLabel2)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jFormattedTextField1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(baudRate, 0, 70, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jButton2)
+                .addComponent(openPort)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jButton3)
                 .addContainerGap())
@@ -122,12 +139,12 @@ public class home extends javax.swing.JFrame implements SerialPortEventListener 
                 .addContainerGap()
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel1)
-                    .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton1)
+                    .addComponent(ports, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(refresh)
                     .addComponent(jLabel2)
-                    .addComponent(jFormattedTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton2)
-                    .addComponent(jButton3))
+                    .addComponent(openPort)
+                    .addComponent(jButton3)
+                    .addComponent(baudRate, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
@@ -163,10 +180,56 @@ public class home extends javax.swing.JFrame implements SerialPortEventListener 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+    private void refreshActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_refreshActionPerformed
         // TODO add your handling code here:
         getAllComPorts();
-    }//GEN-LAST:event_jButton1ActionPerformed
+    }//GEN-LAST:event_refreshActionPerformed
+
+    private void openPortActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_openPortActionPerformed
+        // TODO add your handling code here:
+        try {
+            if (ports.getSelectedIndex() > 0) {
+                portList = CommPortIdentifier.getPortIdentifiers();
+                while (portList.hasMoreElements()) {
+                    portId = (CommPortIdentifier) portList.nextElement();
+                    if (portId.getPortType() == CommPortIdentifier.PORT_SERIAL) {
+                        if (portId.getName().equals(ports.getSelectedItem().toString())) {
+                            serialPort = (SerialPort) portId.open("serialComPortReader", 2000);
+                            openPort.setEnabled(false);
+                            ports.setEnabled(false);
+                            refresh.setEnabled(false);
+                            baudRate.setEnabled(false);
+                            inputStream = serialPort.getInputStream();
+                            serialPort.addEventListener(this);
+                            serialPort.setSerialPortParams(Integer.parseInt(baudRate.getSelectedItem().toString()), SerialPort.DATABITS_8,
+                                    SerialPort.STOPBITS_1,
+                                    SerialPort.PARITY_NONE);
+                            break;
+                        }
+                    }
+                }
+            } else {
+                JOptionPane.showMessageDialog(rootPane, "Please Select COM Port");
+                ports.grabFocus();
+            }
+        } catch (PortInUseException | IOException | TooManyListenersException | UnsupportedCommOperationException e) {
+            JOptionPane.showMessageDialog(rootPane, e.getMessage());
+        }
+    }//GEN-LAST:event_openPortActionPerformed
+
+    private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
+        // TODO add your handling code here:
+        if (serialPort != null) {
+            serialPort.close();
+            serialPort = null;
+            openPort.setEnabled(true);
+            ports.setEnabled(true);
+            refresh.setEnabled(true);
+            baudRate.setEnabled(true);
+            jTextArea2.setText("");
+        }
+
+    }//GEN-LAST:event_jButton3ActionPerformed
 
     /**
      * @param args the command line arguments
@@ -189,7 +252,7 @@ public class home extends javax.swing.JFrame implements SerialPortEventListener 
         }
         //</editor-fold>
         //</editor-fold>
-        
+
         //</editor-fold>
         //</editor-fold>
 
@@ -203,20 +266,53 @@ public class home extends javax.swing.JFrame implements SerialPortEventListener 
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton jButton1;
-    private javax.swing.JButton jButton2;
+    private javax.swing.JComboBox<String> baudRate;
     private javax.swing.JButton jButton3;
-    private javax.swing.JComboBox<String> jComboBox1;
-    private javax.swing.JFormattedTextField jFormattedTextField1;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JTextArea jTextArea2;
+    private javax.swing.JButton openPort;
+    private javax.swing.JComboBox<String> ports;
+    private javax.swing.JButton refresh;
     // End of variables declaration//GEN-END:variables
 
     @Override
     public void serialEvent(SerialPortEvent spe) {
+        switch (spe.getEventType()) {
 
+            case SerialPortEvent.BI:
+
+            case SerialPortEvent.OE:
+
+            case SerialPortEvent.FE:
+
+            case SerialPortEvent.PE:
+
+            case SerialPortEvent.CD:
+
+            case SerialPortEvent.CTS:
+
+            case SerialPortEvent.DSR:
+
+            case SerialPortEvent.RI:
+
+            case SerialPortEvent.OUTPUT_BUFFER_EMPTY:
+                break;
+
+            case SerialPortEvent.DATA_AVAILABLE:
+                byte[] readBuffer = new byte[1024];
+                try {
+                    while (inputStream.available() > 0) {
+                        inputStream.read(readBuffer);
+                    }
+//                    System.out.println(new String(readBuffer));
+                    jTextArea2.setText(jTextArea2.getText() + new String(readBuffer));
+                } catch (IOException e) {
+                    JOptionPane.showMessageDialog(rootPane, e.getMessage());
+                }
+                break;
+        }
     }
 }
